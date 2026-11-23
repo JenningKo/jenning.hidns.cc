@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>影视推荐 · jenning.hidns.cc</title>
+<meta name="description" content="播放器式影视首页：热播、国产、今日播出、即将上映、豆瓣高分">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:#07090f; color:#eef2fa; min-height:100vh; padding-bottom:36px; }
+  /* 顶部英雄区 */
+  #hero { position:relative; height:300px; overflow:hidden; background:#0d1120; }
+  #heroImg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .8s; }
+  #heroImg.on { opacity:.85; }
+  #heroShade { position:absolute; inset:0; background:linear-gradient(180deg, rgba(7,9,15,.25) 0%, rgba(7,9,15,0) 35%, rgba(7,9,15,.88) 82%, #07090f 100%); }
+  #heroInfo { position:absolute; left:16px; right:16px; bottom:14px; }
+  #heroInfo .tag { display:inline-block; font-size:11px; letter-spacing:1px; color:#ffd479;
+    border:1px solid rgba(255,212,121,.55); padding:3px 9px; border-radius:999px; margin-bottom:8px; background:rgba(0,0,0,.35); }
+  #heroInfo h1 { font-size:25px; line-height:1.25; text-shadow:0 2px 12px rgba(0,0,0,.7); }
+  #heroInfo .meta { font-size:12.5px; color:#cfd9ec; margin-top:6px; text-shadow:0 1px 6px rgba(0,0,0,.8); }
+  #heroInfo .desc { font-size:12.5px; color:#aeb9cf; margin-top:5px; line-height:1.55;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  #heroDots { position:absolute; right:16px; bottom:16px; display:flex; gap:5px; }
+  #heroDots i { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.35); }
+  #heroDots i.on { background:#ffd479; width:16px; border-radius:3px; }
+  /* 搜索 */
+  .search { display:flex; gap:8px; padding:14px 16px 2px; max-width:640px; margin:0 auto; }
+  .search input { flex:1; padding:11px 14px; border-radius:12px; border:1px solid #232c47;
+    background:#10182c; color:#eef2fa; font-size:15px; outline:none; }
+  .search button { padding:11px 18px; border-radius:12px; border:none; cursor:pointer;
+    background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:#fff; font-size:15px; font-weight:600; }
+  main { max-width:640px; margin:0 auto; }
+  h2 { font-size:17px; margin:24px 16px 11px; display:flex; align-items:baseline; gap:8px; }
+  h2 .sub { font-size:12px; color:#7c8aa5; font-weight:400; }
+  .row { display:flex; gap:11px; overflow-x:auto; padding:2px 16px 8px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .row::-webkit-scrollbar { display:none; }
+  .pcard { flex:none; width:110px; cursor:pointer; }
+  .pcard .pw { position:relative; width:110px; height:165px; border-radius:12px; overflow:hidden; background:#141b30;
+    box-shadow:0 8px 20px rgba(0,0,0,.45); }
+  .pcard img { width:100%; height:100%; object-fit:cover; display:block; }
+  .pcard .ph { height:100%; display:flex; align-items:center; justify-content:center; font-size:32px; }
+  .badge { position:absolute; left:0; top:8px; font-size:11px; font-weight:700; color:#14100a;
+    background:linear-gradient(90deg,#ffd479,#ffb347); padding:2.5px 8px 2.5px 6px; border-radius:0 8px 8px 0;
+    box-shadow:0 2px 8px rgba(0,0,0,.4); }
+  .badge.blue { background:linear-gradient(90deg,#7cc4ff,#5aa2ff); color:#0a1526; }
+  .badge.green { background:linear-gradient(90deg,#7be3a8,#43c97e); color:#0a2013; }
+  .pcard .name { font-size:13px; font-weight:600; line-height:1.35; margin-top:7px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .pcard .sub { font-size:11.5px; color:#8b99b5; margin-top:3px; }
+  .pcard .sub .star { color:#ffd479; }
+  .empty { color:#7c8aa5; font-size:13px; padding:4px 16px 10px; }
+  /* 详情弹窗 */
+  #mask { display:none; position:fixed; inset:0; background:rgba(3,4,8,.82); z-index:50; overflow:auto; }
+  #mask.on { display:block; }
+  #detail { max-width:480px; margin:26px auto; background:#121830; border:1px solid #26314f; border-radius:18px; overflow:hidden; }
+  #detail .bd { width:100%; height:210px; object-fit:cover; display:block; }
+  #detail .body { padding:16px; }
+  #detail h3 { font-size:20px; line-height:1.35; }
+  #detail .orig { color:#7c8aa5; font-size:12.5px; margin-top:3px; }
+  #detail .meta { color:#aeb9cf; font-size:13px; margin-top:9px; line-height:1.8; }
+  #detail .meta .star { color:#ffd479; }
+  #detail .next { margin-top:11px; background:#0c1226; border:1px solid #26314f; border-radius:11px; padding:10px 12px; font-size:14px; line-height:1.7; }
+  #detail .next b { color:#ffd479; }
+  #detail .sum { font-size:13.5px; color:#c6d2e6; line-height:1.8; margin-top:11px; }
+  #detail .close { display:block; width:100%; margin-top:16px; padding:12px; border:none; border-radius:11px;
+    background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+  footer { text-align:center; color:#5f6d88; font-size:12px; margin-top:30px; line-height:1.8; padding:0 16px; }
+</style>
+</head>
+<body>
+
+<div id="hero">
+  <img id="heroImg" alt="">
+  <div id="heroShade"></div>
+  <div id="heroInfo">
+    <span class="tag" id="heroTag">今日推荐</span>
+    <h1 id="heroTitle">正在加载…</h1>
+    <div class="meta" id="heroMeta"></div>
+    <div class="desc" id="heroDesc"></div>
+  </div>
+  <div id="heroDots"></div>
+</div>
+
+<div class="search">
+  <input id="q" type="search" placeholder="搜电影、剧集（中文名就行）" enterkeyhint="search">
+  <button onclick="doSearch()">搜索</button>
+</div>
+
+<main>
+  <div id="searchBox" style="display:none">
+    <h2>🔍 搜索结果</h2>
+    <div class="row" id="searchRow"></div>
+  </div>
+
+  <h2>🔥 正在热播 <span class="sub">全网热度</span></h2>
+  <div class="row" id="rowTrend"><div class="empty">正在加载…</div></div>
+
+  <h2>🇨🇳 国产热播 <span class="sub">国产剧</span></h2>
+  <div class="row" id="rowCN"><div class="empty">正在加载…</div></div>
+
+  <h2>📺 今日播出 <span class="sub">今天更新的剧</span></h2>
+  <div class="row" id="rowToday"><div class="empty">正在加载…</div></div>
+
+  <h2>🆕 即将上映 <span class="sub">电影 · 倒计时</span></h2>
+  <div class="row" id="rowSoon"><div class="empty">正在加载…</div></div>
+
+  <h2>⭐ 豆瓣高分经典 <span class="sub">影史口碑之作</span></h2>
+  <div class="row" id="rowDouban"><div class="empty">正在加载…</div></div>
+
+  <h2>🌍 海外佳片 <span class="sub">高分电影</span></h2>
+  <div class="row" id="rowTop"><div class="empty">正在加载…</div></div>
+
+  <footer>数据来源：TMDB（中文影视库）· 豆瓣评分专区为经典影片的公认分数<br>
+  © 2026 Jenning Ko · jenning.hidns.cc</footer>
+</main>
+
+<div id="mask"><div id="detail"></div></div>
+
+<script>
+var KEY = 'd13be644ec5c83ac9ddf8264cd591bbd';
+var BASE = 'https://api.themoviedb.org/3';
+var IMG = 'https://image.tmdb.org/t/p/w342';
+var IMG_BIG = 'https://image.tmdb.org/t/p/w780';
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function get(path){
+  var url = BASE + path + (path.indexOf('?')>=0?'&':'?') + 'api_key=' + KEY + '&language=zh-CN';
+  return fetch(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); });
+}
+function daysFromNow(dateStr){
+  if(!dateStr) return 0;
+  var t = new Date(); t.setHours(0,0,0,0);
+  return Math.round((new Date(dateStr+'T00:00:00') - t)/86400000);
+}
+function whenText(dateStr){
+  var n = daysFromNow(dateStr);
+  if(n===0) return '今天';
+  if(n===1) return '明天';
+  if(n>1) return '还有 '+n+' 天';
+  return dateStr;
+}
+function title(x){ return x.title || x.name || ''; }
+function dateOf(x){ return x.release_date || x.first_air_date || ''; }
+function typeOf(x){ return x.media_type==='tv' || x.name ? 'tv' : 'movie'; }
+
+function card(x, badge){
+  var img = x.poster_path ? '<img loading="lazy" src="'+IMG+esc(x.poster_path)+'" alt="">' : '<div class="ph">🎬</div>';
+  var score = x.vote_average ? '<span class="star">★ '+x.vote_average.toFixed(1)+'</span> · ' : '';
+  var yr = dateOf(x) ? dateOf(x).slice(0,4) : '';
+  return '<div class="pcard" onclick="openDetail(\''+typeOf(x)+'\','+x.id+')">'+
+    '<div class="pw">'+img+(badge||'')+'</div>'+
+    '<div class="name">'+esc(title(x))+'</div>'+
+    '<div class="sub">'+score+yr+'</div></div>';
+}
+function fillRow(id, list, badgeFn){
+  var el = document.getElementById(id);
+  if(!list || !list.length){ el.innerHTML='<div class="empty">暂时没加载出来，刷新试试</div>'; return; }
+  el.innerHTML = list.map(function(x){ return card(x, badgeFn? badgeFn(x):''); }).join('');
+}
+
+/* 英雄区轮播 */
+var heroList=[], heroIdx=0, heroTimer=null;
+function showHero(i){
+  var x = heroList[i]; if(!x) return;
+  heroIdx = i;
+  var img = document.getElementById('heroImg');
+  img.classList.remove('on');
+  setTimeout(function(){ img.src = IMG_BIG + (x.backdrop_path||x.poster_path||''); img.classList.add('on'); }, 180);
+  document.getElementById('heroTitle').textContent = title(x);
+  document.getElementById('heroTag').textContent = typeOf(x)==='tv' ? '热播剧集' : '热门电影';
+  document.getElementById('heroMeta').textContent =
+    (x.vote_average? '★ '+x.vote_average.toFixed(1)+' · ':'') + (dateOf(x)||'') + (typeOf(x)==='tv'?' · 剧集':' · 电影');
+  document.getElementById('heroDesc').textContent = x.overview || '';
+  document.getElementById('heroDots').innerHTML = heroList.map(function(_,j){
+    return '<i class="'+(j===i?'on':'')+'"></i>'; }).join('');
+  document.getElementById('hero').onclick = function(){ openDetail(typeOf(x), x.id); };
+}
+function startHero(list){
+  heroList = list.filter(function(x){ return x.backdrop_path; }).slice(0,5);
+  if(!heroList.length) return;
+  showHero(0);
+  clearInterval(heroTimer);
+  heroTimer = setInterval(function(){ showHero((heroIdx+1)%heroList.length); }, 6000);
+}
+
+/* 各板块 */
+get('/trending/all/day').then(function(r){
+  var list = (r.results||[]).filter(function(x){ return x.media_type!=='person'; });
+  startHero(list);
+  fillRow('rowTrend', list.slice(0,14));
+}).catch(function(){ fillRow('rowTrend', []); document.getElementById('heroTitle').textContent='加载失败，刷新试试'; });
+
+get('/discover/tv?with_original_language=zh&sort_by=popularity.desc').then(function(r){
+  fillRow('rowCN', (r.results||[]).slice(0,14));
+}).catch(function(){ fillRow('rowCN', []); });
+
+get('/tv/airing_today').then(function(r){
+  fillRow('rowToday', (r.results||[]).slice(0,14), function(){ return '<span class="badge green">今日更新</span>'; });
+}).catch(function(){ fillRow('rowToday', []); });
+
+get('/movie/upcoming?region=CN').then(function(r){
+  var today = new Date(); today = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var list = (r.results||[]).filter(function(x){ return x.release_date && x.release_date >= today; })
+    .sort(function(a,b){ return a.release_date<b.release_date?-1:1; }).slice(0,14);
+  fillRow('rowSoon', list, function(x){
+    return '<span class="badge blue">'+esc(x.release_date.slice(5))+' · '+esc(whenText(x.release_date))+'</span>'; });
+}).catch(function(){ fillRow('rowSoon', []); });
+
+get('/movie/top_rated').then(function(r){
+  fillRow('rowTop', (r.results||[]).slice(0,14));
+}).catch(function(){ fillRow('rowTop', []); });
+
+/* 豆瓣高分经典：固定片单（公认分数）+ TMDB 海报 */
+var DOUBAN = [
+  ['肖申克的救赎','The Shawshank Redemption',1994,'9.7'],
+  ['霸王别姬','Farewell My Concubine',1993,'9.6'],
+  ['控方证人','Witness for the Prosecution',1957,'9.6'],
+  ['阿甘正传','Forrest Gump',1994,'9.5'],
+  ['辛德勒的名单',"Schindler's List",1993,'9.5'],
+  ['泰坦尼克号','Titanic',1997,'9.4'],
+  ['这个杀手不太冷','Léon: The Professional',1994,'9.4'],
+  ['千与千寻','Spirited Away',2001,'9.4'],
+  ['星际穿越','Interstellar',2014,'9.4'],
+  ['盗梦空间','Inception',2010,'9.4'],
+  ['忠犬八公的故事','Hachi: A Dog\'s Tale',2009,'9.4'],
+  ['海上钢琴师','The Legend of 1900',1998,'9.3'],
+  ['教父','The Godfather',1972,'9.3'],
+  ['无间道','Infernal Affairs',2002,'9.3'],
+  ['疯狂动物城','Zootopia',2016,'9.2']
+];
+Promise.all(DOUBAN.map(function(d){
+  return get('/search/movie?query='+encodeURIComponent(d[1])+'&year='+d[2]).then(function(r){
+    var m = (r.results||[])[0];
+    if(!m) return '';
+    m = JSON.parse(JSON.stringify(m)); m.title = d[0]; m.media_type='movie';
+    return card(m, '<span class="badge">豆瓣 '+d[3]+'</span>');
+  }).catch(function(){ return ''; });
+})).then(function(htmls){
+  var el = document.getElementById('rowDouban');
+  el.innerHTML = htmls.join('') || '<div class="empty">暂时没加载出来，刷新试试</div>';
+});
+
+/* 搜索 */
+function doSearch(){
+  var q = document.getElementById('q').value.trim();
+  if(!q) return;
+  var box=document.getElementById('searchBox'), row=document.getElementById('searchRow');
+  box.style.display='block'; row.innerHTML='<div class="empty">正在搜…</div>';
+  get('/search/multi?query='+encodeURIComponent(q)).then(function(r){
+    var list=(r.results||[]).filter(function(x){ return x.media_type!=='person' && (x.poster_path||x.backdrop_path); }).slice(0,14);
+    if(!list.length){ row.innerHTML='<div class="empty">没搜到，换个名字试试</div>'; return; }
+    row.innerHTML = list.map(function(x){ return card(x); }).join('');
+  }).catch(function(){ row.innerHTML='<div class="empty">搜索失败，刷新试试</div>'; });
+}
+document.getElementById('q').addEventListener('keydown', function(e){ if(e.key==='Enter') doSearch(); });
+
+/* 详情 */
+function openDetail(type, id){
+  var mask=document.getElementById('mask'), box=document.getElementById('detail');
+  mask.classList.add('on'); box.innerHTML='<div class="body">正在加载…</div>';
+  get('/'+type+'/'+id).then(function(x){
+    var bd = x.backdrop_path ? '<img class="bd" src="'+IMG_BIG+esc(x.backdrop_path)+'" alt="">' : '';
+    var orig = (x.original_title||x.original_name||'');
+    var score = x.vote_average ? '<span class="star">★ '+x.vote_average.toFixed(1)+'</span>（TMDB） · ' : '';
+    var genres = (x.genres||[]).map(function(g){ return g.name; }).join(' / ');
+    var extra='';
+    if(type==='tv'){
+      var st = x.status==='Ended'||x.status==='Canceled' ? '已完结' : '在播';
+      var ne = x.next_episode_to_air;
+      if(ne){
+        extra = '<div class="next">📅 下一集：第 '+ne.season_number+' 季第 '+ne.episode_number+' 集<br><b>'+esc(whenText(ne.air_date))+'</b>（'+esc(ne.air_date||'')+'）播出</div>';
+      } else if(st==='在播'){
+        extra = '<div class="next">📅 下一集播出时间暂未公布</div>';
+      } else {
+        extra = '<div class="next">📅 这部剧已完结，共 '+(x.number_of_seasons||'?')+' 季 '+(x.number_of_episodes||'?')+' 集</div>';
+      }
+      box.innerHTML = bd+'<div class="body"><h3>'+esc(x.name||'')+'</h3>'+
+        (orig&&orig!==x.name?'<div class="orig">'+esc(orig)+'</div>':'')+
+        '<div class="meta">'+score+esc(x.first_air_date||'')+' · '+st+'<br>'+esc(genres)+'</div>'+
+        extra+'<div class="sum">'+esc(x.overview||'暂无简介')+'</div>'+
+        '<button class="close" onclick="closeDetail()">关闭</button></div>';
+    } else {
+      var days = x.release_date ? daysFromNow(x.release_date) : 0;
+      extra = '<div class="next">🎬 上映日期：<b>'+esc(x.release_date||'未定')+'</b>'+(days>0?'（'+esc(whenText(x.release_date))+'）':days===0?'（就是今天）':'')+'</div>';
+      box.innerHTML = bd+'<div class="body"><h3>'+esc(x.title||'')+'</h3>'+
+        (orig&&orig!==x.title?'<div class="orig">'+esc(orig)+'</div>':'')+
+        '<div class="meta">'+score+esc(genres)+'</div>'+
+        extra+'<div class="sum">'+esc(x.overview||'暂无简介')+'</div>'+
+        '<button class="close" onclick="closeDetail()">关闭</button></div>';
+    }
+  }).catch(function(){ box.innerHTML='<div class="body">加载失败<button class="close" onclick="closeDetail()">关闭</button></div>'; });
+}
+function closeDetail(){ document.getElementById('mask').classList.remove('on'); }
+document.getElementById('mask').addEventListener('click', function(e){ if(e.target===this) closeDetail(); });
+</script>
+</body>
+</html>
